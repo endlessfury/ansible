@@ -1,0 +1,10 @@
+---
+- hosts: dbs
+  gather_facts: no
+  become: yes
+  user: root
+  vars:
+    pg_version: "15"
+  roles: 
+    - install_engine
+    - add_extension

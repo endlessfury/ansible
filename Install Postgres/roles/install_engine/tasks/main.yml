@@ -1,0 +1,16 @@
+---
+    - name: Add PostgreSQL repository for version {{ pg_version }}
+      yum:
+              #        name: https://download.postgresql.org/pub/repos/yum/reporpms/EL-8-x86_64/pgdg-redhat-repo-latest.noarch.rpm
+        name: https://download.postgresql.org/pub/repos/yum/reporpms/EL-7-x86_64/pgdg-redhat-repo-latest.noarch.rpm
+        state: present
+        validate_certs: false
+
+    - name: Install PostgreSQL server version {{ pg_version }}
+      yum:
+        name:
+          - postgresql{{ pg_version.split('.')[0] }}-server
+          - python3-psycopg2 # required for Ansible PostgreSQL modules
+        disable_gpg_check: true
+        validate_certs: false
+        state: present

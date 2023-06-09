@@ -1,0 +1,8 @@
+db_name: db_instance
+pg_version: "15"
+volume_path: "/db_instance"
+data_path: "{{ volume_path }}/{{ db_name }}/data"
+wal_path: "{{ volume_path }}/{{ db_name }}/wal"
+log_path: "{{ volume_path }}/{{ db_name }}/logs"
+tablespaces_path: "{{ volume_path }}/{{ db_name }}/tablespaces"
+db_port: 2534

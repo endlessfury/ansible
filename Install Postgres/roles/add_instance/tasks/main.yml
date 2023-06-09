@@ -1,0 +1,115 @@
+---
+# tasks file for roles/add_instance
+    - name: Create db cluster data storage
+      ansible.builtin.file:
+        path: "{{ data_path }}"
+        state: directory
+        mode: '0750'
+        owner: postgres
+        group: postgres
+
+    - name: Create db cluster log storage
+      ansible.builtin.file:
+        path: "{{ log_path }}"
+        state: directory
+        mode: '0750'
+        owner: postgres
+        group: postgres
+
+    - name: Create db cluster tablespace storage
+      ansible.builtin.file:
+        path: "{{ tablespaces_path }}"
+        state: directory
+        mode: '0750'
+        owner: postgres
+        group: postgres
+
+    - name: Create db cluster wal storage
+      ansible.builtin.file:
+        path: "{{ wal_path }}"
+        state: directory
+        mode: '0750'
+        owner: postgres
+        group: postgres
+
+    - name: Initialize PostgreSQL database cluster
+      shell: runuser -l 'postgres' -c "/usr/pgsql-{{ pg_version.split('.')[0] }}/bin/initdb -D "{{ data_path }}" -X "{{ wal_path }}""
+
+    - name: Set up hba.conf file for local authentication with no password
+      lineinfile:
+        dest: "{{ data_path }}/pg_hba.conf"
+        regexp: "^host.*all.*all.*127.*" 
+        line: "host all all 127.0.0.1/32 trust\nhost all all 0.0.0.0/0 password" 
+        state: present 
+        backup: yes
+
+    - name: Change configuration to listen from all hosts
+      lineinfile:
+        dest: "{{ data_path }}/postgresql.conf"
+        line: "listen_addresses = '*'"
+        state: present
+        backup: yes
+
+    - name: Change configuration for logs
+      lineinfile:
+        dest: "{{ data_path }}/postgresql.conf"
+        line: "log_line_prefix = '%t [%p]: [%l] user=%u@%a '\nlog_min_duration_statement = 5000 # Log only statements executed in more than 5 seconds\nlogging_collector = on # Enable capturing of stderr and csvlog\nlog_directory = '../logs/'\nlog_file_mode = 0755"
+        state: present
+        backup: yes
+
+    - name: Enable autovacum
+      lineinfile:
+        dest: "{{ data_path }}/postgresql.conf"
+        line: "autovacuum = on"
+        state: present
+        backup: yes
+
+    - name: Change log timezone
+      lineinfile:
+        dest: "{{ data_path }}/postgresql.conf"
+        regexp: "log_timezone = 'America/New_York'"
+        line: "log_timezone = 'Europe/Warsaw'"
+        state: present
+        backup: yes
+
+    - name: Change db port number
+      lineinfile:
+        dest: "{{ data_path }}/postgresql.conf"
+        line: "port = {{ db_port }}"
+        state: present
+        backup: yes
+
+    - name: Create service file
+      template:
+        src: templates/service.j2
+        dest: "/etc/systemd/system/{{ db_name | lower }}_db.service"
+        mode: 0755
+      tags: service
+
+    - name: Enable services
+      systemd:
+        daemon_reload: true
+        enabled: true
+        name: "{{ db_name | lower }}_db.service"
+        state: started
+      tags: service
+
+    - name: Create profile file
+      template:
+        src: templates/profile.j2
+        dest: "{{ volume_path }}/{{ db_name }}/profile_{{ db_name }}"
+        mode: 0700
+      become_user: postgres
+      tags: profile
+
+    - name: Create user {{ db_user }} with privileges - login,superuser, createdb, createrole
+      shell: runuser -l 'postgres' -c "source {{ volume_path }}/{{ db_name }}/profile_{{ db_name }};export PGUSER=postgres;export PGDATABASE=postgres;psql -c \"CREATE ROLE {{ db_user }} WITH PASSWORD '{{ db_pass }}' SUPERUSER CREATEDB CREATEROLE INHERIT LOGIN;\""
+      tags: admin3
+
+    - name: Create database in the cluster
+      shell: runuser -l 'postgres' -c "source {{ volume_path }}/{{ db_name }}/profile_{{ db_name }};export PGUSER=postgres;export PGDATABASE=postgres;psql -c \"CREATE DATABASE {{ db_name }} ENCODING 'UTF-8' OWNER {{ db_user }} TEMPLATE template0;\""
+      tags: db2
+
+    - name: Enable dblink extension
+      shell: runuser -l 'postgres' -c "source {{ volume_path }}/{{ db_name }}/profile_{{ db_name }};psql -c \"create extension dblink;\""
+      tags: dblink

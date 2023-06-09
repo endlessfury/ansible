@@ -1,0 +1,45 @@
+# tasks file for add_extension
+- name: Install PostgreSQL contrib version {{ pg_version }} for extensions
+  yum:
+    name: postgresql{{ pg_version.split('.')[0] }}-contrib.x86_64
+    disable_gpg_check: true
+    validate_certs: false
+    state: present
+  tags: contrib
+
+- name: Install yum-utils
+  yum:
+    name: yum-utils
+    state: latest
+  tags: utils
+
+- name: Install PowerTools for gdal install
+  shell: "yum -y install dnf-plugins-core;yum-config-manager --enable powertools;"
+  tags: gdal
+
+- name: Check postgis version latest available for pg{{ pg_version.split('.')[0] }}
+  yum: 
+    list: postgis*_{{ pg_version.split('.')[0] }}.x86_64
+    state: present
+  register: postgisvers
+  tags: postgis
+
+- name: Extract name of latest version of postgis
+  set_fact: 
+    postgis_ver: "{{ item.value }}"
+  loop: "{{ lookup('ansible.builtin.dict', postgisvers.results | last) }}"
+  when: "'name' in item.key"
+  tags: postgis
+
+- name: Show lastest postgis version
+  debug: 
+    msg: "{{ postgis_ver }}"
+  tags: postgis
+
+- name: Install postgis {{ postgis_ver }}
+  yum:
+    name: "{{ postgis_ver }}.x86_64"
+    disable_gpg_check: true
+    validate_certs: false
+    state: present
+  tags: postgis

@@ -1,0 +1,7 @@
+[dbs]
+db_instance ansible_host=ip
+db_instance2 ansible_host=ip2
+
+[vms]
+dest_server ansible_host=ip
+dest_server2 ansible_host=ip2

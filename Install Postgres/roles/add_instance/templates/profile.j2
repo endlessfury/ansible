@@ -1,0 +1,29 @@
+################################
+# general environment settings #
+################################
+umask 022
+stty istrip
+export LS_COLORS=`echo $LS_COLORS | sed 's/di=01;34/di=01;37/'`
+MAIL=/usr/mail/${LOGNAME:?}
+export EDITOR=vi;
+export PAGER=more;
+export LESS=c;
+export LESSCHARSET=latin1;
+
+
+####################################################
+# setup for normal operation of Postgres databases #
+####################################################
+
+export PSQL_HOME=/usr/pgsql-{{ pg_version.split('.')[0] }}
+export PGPORT={{ db_port }}
+export PGHOST=127.0.0.1
+export PGUSER=admin
+export PGDATABASE={{ db_name | lower }}
+
+PATH=$PSQL_HOME/bin:$PATH
+export PATH
+
+PS1="\u@\h:\W [{{ db_name }}] $ "; 
+export PS1
+

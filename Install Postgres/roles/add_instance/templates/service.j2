@@ -1,0 +1,18 @@
+[Unit]
+Description=Database instance {{ db_name }} service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=forking
+User=postgres
+OOMScoreAdjust=-1000
+ExecStart=/usr/pgsql-{{ pg_version.split('.')[0] }}/bin/pg_ctl start -D {{ data_path }}  -l {{ volume_path }}/{{ db_name }}/logs/{{ db_name }}_start.log -W -s -t 270
+ExecStop=/usr/pgsql-{{ pg_version.split('.')[0] }}/bin/pg_ctl stop -D {{ data_path }}
+ExecReload=/usr/pgsql-{{ pg_version.split('.')[0] }}/bin/pg_ctl reload -D {{ data_path }} -s
+TimeoutSec=300
+Restart=always
+RestartSec=30s
+
+[Install]
+WantedBy=multi-user.target
